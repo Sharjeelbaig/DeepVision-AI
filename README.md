@@ -20,5 +20,5 @@ source venv/bin/activate
 uv sync
 
 # Run the application
-python app.py
+uv run main.py
 ```
