@@ -5,17 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/release/python-380/)
 
-
-
-## Basic Setup Complete
-
-The basic setup for the DeepVision project has been successfully completed.
-
-## Next Steps
-
-- Set up database connections
-- Configure Flask Backend API endpoints
-- Implement Frontend
+A product for face recognition and intrusion detection.
 
 ## Quick Start
 
