@@ -11,10 +11,10 @@ the layer names are self-explanatory, each layer will encapsulate specific funct
 
 ### Supabase Layer
 The Supabase layer will handle all database interactions, user authentication, and real-time data synchronization. Key modules include:
-- Authentication module `supabase/auth`
-- DB module `supabase/db`
-- Storage module `supabase/storage`
+- Authentication module `supabase_utils/auth`
+- DB module `supabase_utils/db`
+- Storage module `supabase_utils/storage`
 
 ### Deepface Layer
 The Deepface layer will be responsible for all functionalities related to facial recognition and image processing. Key module is:
-- Face Recognition module `deepface/recognition`
+- Face Recognition module `deepface_utils/recognition`

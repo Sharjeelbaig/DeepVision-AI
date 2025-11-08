@@ -1,5 +1,11 @@
 from supabase_utils.auth.register import registerUser
+from supabase_utils.auth.login import loginUser
+from supabase_utils.auth.user import getUserProfile
+# user = registerUser("eng.sharjeel.baig@gmail.com", "SecureP@ssw0rd!", {"name": "Sharjeel", "bio": "Developer"})
+# print(user)
 
-res = registerUser("eng.sharjeel.baig@gmail.com", "12345678")
+user = loginUser("eng.sharjeel.baig@gmail.com", "SecureP@ssw0rd!")
+# print(user)
 
-print(res)
+profile = getUserProfile()
+print(profile)

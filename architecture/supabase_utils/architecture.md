@@ -9,10 +9,10 @@ The Supabase layer consists of three main modules, each responsible for specific
 
 ### Authentication Module
 The Authentication module is responsible for managing user registration, login, logout, and profile retrieval. It provides the following key functions:
-- `registerUser(email, password)`: Registers a new user with the provided email and password.
+- `registerUser(email, password, {name, bio})`: Registers a new user with the provided email and password and create user profile in the user_data table.
 - `loginUser(email, password)`: Authenticates a user and initiates a session.
 - `logoutUser()`: Ends the current user session.
-- `getUserProfile(email)`: Retrieves the profile information of a user based on their email.
+- `getUserProfile()`: Retrieves the profile information of a user `access_token`, `email`, `name` `bio`, `image_url`.
 
 ### DB Module
 The DB module handles all database operations related to user data and image metadata. It includes the following key functions:
