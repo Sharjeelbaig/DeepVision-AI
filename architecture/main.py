@@ -1,5 +1,5 @@
-from .supabase.auth.register import register_user
+from supabase_utils.auth.register import registerUser
 
-res = register_user("eng.sharjeel.baig@gmail.com", "12345678")
+res = registerUser("eng.sharjeel.baig@gmail.com", "12345678")
 
 print(res)
