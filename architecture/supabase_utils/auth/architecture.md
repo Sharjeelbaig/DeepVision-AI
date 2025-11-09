@@ -3,45 +3,59 @@ Authentication in the Supabase layer of the Deep Vision project is designed to m
 - `register.py`: Contains the `registerUser` function to handle new user registrations and create user profiles in the `user_data` table.
 - `login.py`: Contains the `loginUser` function to authenticate users and initiate sessions.
 - `logout.py`: Contains the `logoutUser` function to end user sessions.
-- `user.py`: Contains the `getUserProfile` function to retrieve user profile information.
+- `session.py`: Contains helper functions to access the current session and user (`getAccessToken`, `getRefreshToken`, `getCurrentUser`).
 
 ## Register User
-The `registerUser` function in `register.py` registers a new user with the provided email. the function line by line is as follows:
+The `registerUser` function in `register.py` registers a new user with the provided email. The current implementation uses Supabase RPCs to validate and create the user profile and wraps the signup flow in a try/except. Line by line it works as follows:
+
 1. It imports the `supabase_client` from the main Supabase utilities.
 ```python
 from supabase_utils.main import supabase_client
 ```
-2. The function `registerUser` takes `email`, `password`, and an optional `data` dictionary containing additional profile information like `name` and `bio`.
+
+2. The function `registerUser` takes `email`, `password`, and an optional `data` dictionary containing additional profile information like `name` and `bio` (defaulting to empty strings).
 ```python
 def registerUser(email: str, password: str, data: dict = {"name": "", "bio": ""}):
 ```
-3. It attempts to sign up the user using the Supabase authentication client.
+
+3. The function runs inside a try/except block to catch and return errors from Supabase calls.
 ```python
-reg = supabase_client.auth.sign_up({
-    "email": email,
-    "password": password,
-})
+try:
+    ...
+except Exception as e:
+    return {"success": False, "error": str(e)}
 ```
-4. It checks if the user is verified; if not, it returns an error message.
+
+4. It calls a Postgres RPC `check_user_verification` (via Supabase `rpc`) with the email. This RPC is expected to perform server-side verification checks before signup.
 ```python
-is_user_verified = reg.user.user_metadata.get("email_verified") == None
-if is_user_verified == False:
-    return {"success": False, "error": "User exists but not verified."}
+    supabase_client.rpc("check_user_verification", {"p_email": email}).execute()
 ```
-5. It checks if the user profile already exists in the `user_data` table; if not, it inserts a new profile.
+
+5. It signs up the user with Supabase Auth using the provided email and password.
 ```python
-is_user_data_added = len(supabase_client.table("user_data").select("*").eq("email", email).execute().data) == 1
-if is_user_data_added is False:
-    supabase_client.table("user_data").insert({
-            "email": email,
-            "name": data.get("name", ""),
-            "bio": data.get("bio", ""),
-        }).execute()
+    supabase_client.auth.sign_up({
+        "email": email,
+        "password": password,
+    })
 ```
-6. Finally, it returns a success message upon successful registration.
+
+6. After signup, it calls another RPC `create_user_profile` to create the user's profile in the database. It passes `p_email`, `p_name`, and `p_bio` parameters populated from the `data` dict.
 ```python
-return {"success": True}
+    supabase_client.rpc("create_user_profile", {
+        "p_email": email,
+        "p_name": data.get("name", ""),
+        "p_bio": data.get("bio", "")
+    }).execute()
 ```
+
+7. If all calls succeed the function returns a simple success dict.
+```python
+    return {"success": True}
+```
+
+8. If any exception is raised during the flow, it is caught and returned as an error dict (see the `except` block above).
+
+Note: the actual `register.py` file currently contains an extra `return {"success": True}` after the try/except block which is unreachable; the above breakdown reflects the intended flow used by the code inside the `try` block.
 ## Login User
 The `loginUser` function in `login.py` authenticates a user and initiates a session. Line by line, it works as follows:
 1. It imports the `supabase_client` from the main Supabase utilities.
@@ -78,37 +92,34 @@ def logoutUser():
     res = supabase_client.auth.sign_out()
     return res
 ```
-## Get User Profile
-The `getUserProfile` function in `user.py` retrieves the profile information of the currently authenticated user. Line by line, it works as follows:
+## Session helpers
+`user.py` has been removed and replaced by `session.py`. This file provides small helpers to access the current Supabase session and authenticated user. Line by line the three functions work as follows:
+
 1. It imports the `supabase_client` from the main Supabase utilities.
 ```python
 from supabase_utils.main import supabase_client
 ```
-2. The function `getUserProfile` takes no parameters.
+
+2. `getAccessToken()` — returns the current session's access token.
 ```python
-def getUserProfile():
-```
-3. It retrieves the currently authenticated user.
-```python
-    user = supabase_client.auth.get_user().user
+def getAccessToken():
     session = supabase_client.auth.get_session()
+    return session.access_token
 ```
-4. If no user is authenticated, it returns `None`.
+
+3. `getRefreshToken()` — returns the current session's refresh token.
 ```python
-    if user is None:
-        return None
+def getRefreshToken():
+    session = supabase_client.auth.get_session()
+    return session.refresh_token
 ```
-5. It fetches the user profile from the `user_data` table based on the user's email.
+
+4. `getCurrentUser()` — returns the currently authenticated user object (or `None` if not authenticated).
 ```python
-    user_data = supabase_client.table("user_data").select("*").eq("email", user.email).execute().data
+def getCurrentUser():
+    user = supabase_client.auth.get_user().user
+    return user
 ```
-6. It adds the `access_token` from the session to the user data.
-```python
-    user_data[0]["access_token"] = session.access_token
-    return user_data[0]
-```
-7. Finally, it returns the user profile data.
-```python
-    return user_data[0]
-```
+
+Note: These helpers assume a session exists; callers should handle `None` values where appropriate (for example, check `getCurrentUser()` before using its fields).
 
