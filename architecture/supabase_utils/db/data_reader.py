@@ -1,4 +1,4 @@
-from supabase_utils.main import supabase_client
+from ..main import supabase_client
 
 def getUserProfile(user_id: str):
     res = supabase_client.table("user_data").select("*").eq("id", user_id).single().execute()

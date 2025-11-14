@@ -1,4 +1,4 @@
-from supabase_utils.main import supabase_client
+from ..main import supabase_client
 def registerUser(email: str, password: str, data: dict = {"name": "", "bio": ""}):
     try:
         supabase_client.rpc("check_user_verification", {"p_email": email}).execute()

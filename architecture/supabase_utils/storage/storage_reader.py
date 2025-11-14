@@ -1,4 +1,4 @@
-from supabase_utils.main import supabase_client
+from ..main import supabase_client
 
 def getFaceImage(email):
     try:

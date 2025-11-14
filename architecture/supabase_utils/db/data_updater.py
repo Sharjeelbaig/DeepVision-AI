@@ -1,4 +1,4 @@
-from supabase_utils.main import supabase_client
+from ..main import supabase_client
 def updateUserImage(user_id: int, image_url: str):
     res = supabase_client.table("user_data").update({
         "image_url": image_url

@@ -1,4 +1,4 @@
-from supabase_utils.main import supabase_client
+from ..main import supabase_client
 import base64, io
 
 def uploadFaceImage(email: str, base64_image: str):

@@ -1,4 +1,10 @@
+import sys
+from pathlib import Path
 from flask import Flask,request
+
+# Add parent directory to path to import architecture module
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from architecture.supabase_utils.auth.login import loginUser
 
 
