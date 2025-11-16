@@ -24,9 +24,24 @@ export default function LiveFeed() {
   return (
     <div className="live-feed-main-container">
         <div className="row w-full justify-between">
+        <div 
+        style={{
+            background: 'blue',
+            position: 'relative',
+
+        }}
+        >
         <Webcam
         ref={webcamRef}
+        style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '400px',
+            height: '300px',
+        }}
         />
+        </div>
         <div className="info-container">
             <h2>Information</h2>
             <p><b>Person Verified Status:</b> Verified </p>

@@ -55,8 +55,11 @@ const waitForDevServer = async (retries = 60, interval = 500) => {
 
 const createWindow = async () => {
   const mainWindow = new BrowserWindow({
-    width: 1024,
+    // width: 1024,
+    width: 800,
     height: 768,
+    maxWidth: 1000,
+    maxHeight: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs')
     }
