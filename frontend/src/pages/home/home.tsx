@@ -7,6 +7,7 @@ export default function Home() {
     title: 'Live Camera',
     description: 'Monitor camera feeds in real-time',
     icon: "📷",
+    link: "/live-feed"
   },
   {
     id: 'faces',
@@ -47,7 +48,13 @@ export default function Home() {
         </div>
         <div className="menu-grid">
             {menuItems.map(item => (
-                <div key={item.id} className="menu-item">
+                <div key={item.id} className="menu-item"
+                onClick={() => {
+                    if (item.link) {
+                        window.location.href = item.link;
+                    }
+                }}
+                >
                     <div className="menu-icon">{item.icon}</div>
                     <h2 className="menu-title">{item.title}</h2>
                     <p className="menu-description">{item.description}</p>
