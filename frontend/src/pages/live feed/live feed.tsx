@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import "../../styles/live feed.css"
+import Card from "../../components/Card";
 
 export default function LiveFeed() {
     const webcamRef = useRef<Webcam>(null);
@@ -22,7 +23,7 @@ export default function LiveFeed() {
 
   return (
     <div className="live-feed-main-container">
-        <div className="row w-full justify-center">
+        <div className="row w-full justify-between">
         <Webcam
         ref={webcamRef}
         />
@@ -32,6 +33,20 @@ export default function LiveFeed() {
             <p><b>Name:</b> Sharjeel Baig </p>
             <p><b>Bio:</b> Software Engineer </p>
         </div>
+        </div>
+        <div className="row w-full justify-between">
+            <Card
+                title="Security Settings"
+                description="This is a live feed from the webcam."
+            />
+            <Card
+                title="Add Member"
+                description="Add a new member to the system."
+            />
+            <Card
+                title="Logs"
+                description="View access logs and history."
+            />
         </div>
     </div>
   )

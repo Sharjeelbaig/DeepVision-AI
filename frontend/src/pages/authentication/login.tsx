@@ -1,10 +1,14 @@
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import "../../styles/authentication.css";
 import { useEffect } from "react";
 export default function Login() {
   useEffect(() => {
     
   }, []);
+  const navigate = useNavigate();
+  const handleLogin = () => {
+      navigate("/home");
+  }
   return (
     <div className="authentication-main-container">
       <div className="logo-container">
@@ -17,7 +21,9 @@ export default function Login() {
 
       <input type="email" placeholder="Email" className="input" />
       <input type="password" placeholder="Password" className="input" />
-      <button className="submit-button">Login</button>
+      <button className="submit-button"
+      onClick={handleLogin}
+      >Login</button>
 
       <div className="row justify-between w-full">
         <Link to="/register" className="redirect-link">
