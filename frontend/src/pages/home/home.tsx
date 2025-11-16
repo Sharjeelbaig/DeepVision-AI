@@ -1,7 +1,8 @@
-import React from 'react'
-import "../../styles/home.css"
-export default function Home() {
-    const menuItems = [
+import { useNavigate } from "react-router-dom";
+
+import "../../styles/home.css";
+
+const menuItems = [
   {
     id: 'live-camera',
     title: 'Live Camera',
@@ -40,6 +41,9 @@ export default function Home() {
     icon: "👤",
   }
 ];
+
+export default function Home() {
+  const navigate = useNavigate();
   return (
     <div className="home-main-container">
         <div className="logo-container">
@@ -51,13 +55,15 @@ export default function Home() {
                 <div key={item.id} className="menu-item"
                 onClick={() => {
                     if (item.link) {
-                        window.location.href = item.link;
+                        navigate(item.link);
                     }
                 }}
+                role={item.link ? "button" : undefined}
                 >
                     <div className="menu-icon">{item.icon}</div>
                     <h2 className="menu-title">{item.title}</h2>
                     <p className="menu-description">{item.description}</p>
+                    {!item.link ? <span className="menu-coming-soon">Coming soon</span> : null}
                 </div>
             ))}
         </div>

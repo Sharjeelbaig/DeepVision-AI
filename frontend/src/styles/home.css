@@ -56,3 +56,11 @@
     font-size: 1rem;
     color: #666;
 }
+
+.menu-coming-soon {
+    display: inline-block;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: #8b1c1c;
+    font-weight: 600;
+}

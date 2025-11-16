@@ -1,14 +1,41 @@
-import { Link, useNavigate } from "react-router";
+import { useState } from "react";
+import type { FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
 import "../../styles/authentication.css";
-import { useEffect } from "react";
+import { login as loginApi } from "../../services/api";
+
 export default function Login() {
-  useEffect(() => {
-    
-  }, []);
   const navigate = useNavigate();
-  const handleLogin = () => {
-      navigate("/home");
-  }
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!email || !password) {
+      setMessage("Email and password are required.");
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await loginApi(email, password);
+      if (response.success) {
+        navigate("/home");
+      } else {
+        setMessage(response.error ?? "Unable to login. Please try again.");
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="authentication-main-container">
       <div className="logo-container">
@@ -19,11 +46,28 @@ export default function Login() {
       <img src="/cover.png" alt="Cover" className="cover-image" />
       <img src="/logo.png" alt="App Logo" className="cover-image-small" />
 
-      <input type="email" placeholder="Email" className="input" />
-      <input type="password" placeholder="Password" className="input" />
-      <button className="submit-button"
-      onClick={handleLogin}
-      >Login</button>
+      <form className="w-full" onSubmit={handleLogin}>
+        <input
+          type="email"
+          placeholder="Email"
+          className="input"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          required
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          className="input"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          required
+        />
+        <button className="submit-button" type="submit" disabled={isLoading}>
+          {isLoading ? "Signing in..." : "Login"}
+        </button>
+        {message ? <p className="status-text">{message}</p> : null}
+      </form>
 
       <div className="row justify-between w-full">
         <Link to="/register" className="redirect-link">
@@ -32,7 +76,7 @@ export default function Login() {
         <Link to="/forgot-password" className="redirect-link">
           Forgot Password?
         </Link>
-      </div> 
+      </div>
     </div>
   );
 }
