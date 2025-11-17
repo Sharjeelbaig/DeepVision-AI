@@ -9,6 +9,8 @@ A product for face recognition and intrusion detection.
 
 ## Quick Start
 
+### Backend Setup
+
 ```bash
 # Activate virtual environment
 source venv/bin/activate
@@ -17,5 +19,16 @@ source venv/bin/activate
 uv sync
 
 # Run the application
-uv run main.py
+cd backend main.py
+```
+
+### Frontend Setup
+
+```bash
+# Navigate to frontend directory
+cd frontend
+# Install dependencies
+npm install
+# Start the application
+npm run electron
 ```
