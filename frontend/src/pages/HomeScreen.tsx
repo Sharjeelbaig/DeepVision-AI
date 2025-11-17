@@ -12,8 +12,15 @@ const HomeScreen = ({ user, onNavigate, onLogout }: HomeScreenProps) => {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-12">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2">Face Recognition System</h1>
+            <div className='flex items-center gap-3 mb-2'>
+            <img src="/logo.png" alt="DeepVision Logo" className="w-12 h-12 mb-4 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-md" />
+            <h1 className="text-4xl font-bold text-white mb-2">DeepVision</h1>
+            </div>
+            <div className="flex items-center gap-2">
             <p className="text-slate-300">Welcome back, {user.email}</p>
+            {/* 👋 */}
+            <span className="text-3xl">👋</span>
+            </div>
           </div>
           <button
             onClick={onLogout}

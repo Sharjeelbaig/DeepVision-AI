@@ -71,7 +71,7 @@ const RegisterScreen = ({ onRegisterSuccess, onSwitchToLogin }: RegisterScreenPr
           </div>
 
           <h1 className="text-3xl font-bold text-center text-white mb-2">Create Account</h1>
-          <p className="text-center text-slate-300 mb-8">Join our face recognition system</p>
+          <p className="text-center text-slate-300 mb-8">Join DeepVision</p>
 
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg flex items-start gap-3">

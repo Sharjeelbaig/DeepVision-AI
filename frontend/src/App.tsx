@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import LoginScreen from './components/LoginScreen';
-import RegisterScreen from './components/RegisterScreen';
-import HomeScreen from './components/HomeScreen';
-import RegisterFaceScreen from './components/RegisterFaceScreen';
-import LiveCameraScreen from './components/LiveCameraScreen';
+import LoginScreen from './pages/LoginScreen';
+import RegisterScreen from './pages/RegisterScreen';
+import HomeScreen from './pages/HomeScreen';
+import RegisterFaceScreen from './pages/RegisterFaceScreen';
+import LiveCameraScreen from './pages/LiveCameraScreen';
 
 type Screen = 'login' | 'register' | 'home' | 'register-face' | 'live-camera';
 
