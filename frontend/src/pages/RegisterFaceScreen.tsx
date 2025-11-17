@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { ArrowLeft, Upload, Camera, CheckCircle, AlertCircle } from 'lucide-react';
+import Commingsoonoverlay from '../components/Commingsoonoverlay';
 
 interface RegisterFaceScreenProps {
   user: { email: string; user_id: string };
@@ -182,6 +183,7 @@ const RegisterFaceScreen = ({ user, onBack }: RegisterFaceScreenProps) => {
                 onClick={startCamera}
                 className="group relative overflow-hidden bg-gradient-to-br from-blue-600/20 to-cyan-500/20 backdrop-blur-lg border border-white/20 rounded-xl p-6 hover:from-blue-600/30 hover:to-cyan-500/30 transition-all duration-300"
               >
+                <Commingsoonoverlay />
                 <Camera className="w-12 h-12 text-cyan-400 mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="text-lg font-semibold text-white mb-2">Capture Photo</h3>
                 <p className="text-sm text-slate-300">Use your camera to take a photo</p>
