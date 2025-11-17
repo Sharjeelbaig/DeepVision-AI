@@ -65,7 +65,8 @@ const RegisterScreen = ({ onRegisterSuccess, onSwitchToLogin }: RegisterScreenPr
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-400 rounded-2xl flex items-center justify-center">
-              <UserPlus className="w-8 h-8 text-white" />
+              {/* <UserPlus className="w-8 h-8 text-white" /> */}
+              <img src="/logo.png" alt="DeepVision Logo" className="absolute w-10 h-10" />
             </div>
           </div>
 

@@ -103,7 +103,8 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
         <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-2xl p-8 border border-white/20">
           <div className="flex justify-center mb-6">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center">
-              <LogIn className="w-8 h-8 text-white" />
+              {/*<LogIn className="w-8 h-8 text-white" />*/}
+              <img src="/logo.png" alt="DeepVision Logo" className="absolute w-10 h-10" />
             </div>
           </div>
 
