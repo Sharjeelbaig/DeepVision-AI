@@ -18,7 +18,7 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/auth/login', {
+      const response = await fetch(import.meta.env.VITE_API_URL + '/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -35,12 +35,13 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
         !!data.session?.user;
 
       if (response.ok && (hasSuccessSignal || hasUserPayload)) {
-        const resolveField = (paths: string[][]) => {
+        const resolveField = (paths: (string | number)[][]) => {
           for (const path of paths) {
             let current: any = data;
             for (const key of path) {
-              if (current && typeof current === 'object' && key in current) {
-                current = current[key];
+              const keyName = String(key);
+              if (current && typeof current === 'object' && keyName in current) {
+                current = current[keyName];
               } else {
                 current = undefined;
                 break;
@@ -51,6 +52,25 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
             }
           }
           return undefined;
+        };
+
+        const decodeSubjectFromToken = (tokenValue?: string) => {
+          if (!tokenValue) {
+            return undefined;
+          }
+          const segments = tokenValue.split('.');
+          if (segments.length < 2) {
+            return undefined;
+          }
+          const normalised = segments[1].replace(/-/g, '+').replace(/_/g, '/');
+          const padded = normalised.padEnd(normalised.length + ((4 - (normalised.length % 4)) % 4), '=');
+          try {
+            const payload = JSON.parse(atob(padded));
+            return typeof payload.sub === 'string' ? payload.sub : undefined;
+          } catch (jwtError) {
+            console.error('Failed to decode JWT payload', jwtError);
+            return undefined;
+          }
         };
 
         const emailFromResponse =
@@ -64,14 +84,28 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
             ['email'],
           ]) || email;
 
+        const tokenFromResponse = resolveField([
+          ['token'],
+          ['data', 'token'],
+          ['access_token'],
+          ['data', 'access_token'],
+          ['session', 'access_token'],
+        ]);
+
         const idFromResponse =
           resolveField([
             ['user', 'id'],
             ['user', 'user_id'],
             ['user', 'uuid'],
+            ['user', 'user_metadata', 'sub'],
+            ['user', 'identities', 0, 'user_id'],
+            ['user', 'identities', 0, 'id'],
+            ['user', 'identities', 0, 'identity_data', 'sub'],
             ['data', 'user', 'id'],
             ['data', 'user', 'user_id'],
             ['data', 'user', 'uuid'],
+            ['data', 'user', 'user_metadata', 'sub'],
+            ['data', 'user', 'identities', 0, 'user_id'],
             ['data', 'profile', 'id'],
             ['data', 'profile', 'user_id'],
             ['data', 'profile', 'uuid'],
@@ -80,11 +114,13 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
             ['session', 'user', 'id'],
             ['session', 'user', 'user_id'],
             ['session', 'user', 'uuid'],
+            ['session', 'user', 'user_metadata', 'sub'],
             ['data', 'id'],
             ['data', 'user_id'],
+            ['user_metadata', 'sub'],
             ['id'],
             ['user_id'],
-          ]) || `session-${Date.now()}`;
+          ]) || decodeSubjectFromToken(tokenFromResponse) || `session-${Date.now()}`;
 
         onLogin({ email: emailFromResponse, user_id: idFromResponse });
       } else {

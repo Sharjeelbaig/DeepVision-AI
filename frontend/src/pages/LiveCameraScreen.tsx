@@ -66,11 +66,11 @@ const LiveCameraScreen = ({ user, onBack }: LiveCameraScreenProps) => {
   const verifyFace = async () => {
     const frame = captureFrame();
     if (!frame) return;
-
+import.meta.env.VITE_API_URL
     setStatus('verifying');
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/face/recognize', {
+      const response = await fetch(import.meta.env.VITE_API_URL + '/face/recognize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

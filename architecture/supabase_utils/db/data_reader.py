@@ -4,6 +4,6 @@ def getUserProfile(user_id: str):
     res = supabase_client.table("user_data").select("*").eq("id", user_id).single().execute()
     return res.data
 
-def getSystemInfo(system_id: str):
-    res = supabase_client.table("system_data").select("*").eq("id", system_id).single().execute()
+def getSystemInfo(user_id: str):
+    res = supabase_client.table("systems_data").select("*").eq("owner_id", user_id).execute()
     return res.data

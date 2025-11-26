@@ -14,9 +14,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from architecture.supabase_utils.auth.login import loginUser
 from architecture.supabase_utils.auth.register import registerUser
 from architecture.facecomparer_utils.compare import recognizeFace
-from architecture.supabase_utils.storage.storage_uploader import uploadFaceImage
-from architecture.supabase_utils.db.data_reader import getUserProfile
+from architecture.supabase_utils.storage.storage_uploader import uploadFaceImage, uploadFaceImageToSystem, uploadImageToDetectSafetyMeasure
+from architecture.supabase_utils.storage.storage_deleter import deleteFaceImage, deleteFaceImageFromSystem
+from architecture.supabase_utils.db.data_reader import getUserProfile, getSystemInfo
+from architecture.supabase_utils.db.data_writer import create_system
+from architecture.supabase_utils.db.data_deleter import deleteFaceFromSystem
+from architecture.supabase_utils.db.data_updater import updateFaceToSystem, alertSystem, addRoomCode
 from architecture.supabase_utils.main import supabase_client
+from architecture.utils.b64_to_image import base64_to_image
+from architecture.transformers_utils.main import predict_safety_measure
 from supabase_auth.types import Options
 
 
@@ -216,6 +222,136 @@ def send_reset_link_route():
         return {"success": True}, 200
     except Exception as exc:
         return {"success": False, "error": str(exc)}, 400
+    
+@app.route('/systems/create-system', methods=['POST'])
+def create_system_route():
+    payload = request.get_json() or {}
+    user_id = payload.get('user_id')
+    system_name = payload.get('system_name')
+
+    if not user_id or not system_name:
+        return {"error": "user_id and system_name required"}, 400
+
+    try:
+        system = create_system(user_id=user_id, system_name=system_name)
+        return {"data": system}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+
+@app.route('/systems/info', methods=['POST'])
+def get_system_route():
+    payload = request.get_json() or {}
+    user_id = payload.get('user_id')
+
+    if not user_id:
+        return {"error": "user_id required"}, 400
+    try:
+        system = getSystemInfo(user_id)
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+
+    if not system:
+        return {"error": "system not found"}, 404
+
+    return {"data": system}, 200
+
+@app.route('/systems/add-face', methods=['POST'])
+def add_face_to_system_route():
+    payload = request.get_json() or {}
+    system_id = payload.get('system_id')
+    face_base64 = payload.get('face_base64')
+    name_of_person = payload.get('name_of_person')
+    if not system_id or not face_base64 or not name_of_person:
+        return {"error": "system_id, face_base64 and name_of_person required"}, 400
+    try:
+        face_url = uploadFaceImageToSystem(system_id=str(system_id), base64_image=face_base64, face_id=str(system_id)+"_"+name_of_person)
+        result = updateFaceToSystem(system_id=system_id, face_url=face_url.get('url'), name_of_person=name_of_person)
+        return {"data": result}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+    
+@app.route('/systems/remove-face', methods=['POST'])
+def remove_face_from_system_route():
+    payload = request.get_json() or {}
+    system_id = payload.get('system_id')
+    face_id = payload.get('face_id')
+
+    if not system_id or not face_id:
+        return {"error": "system_id and face_id required"}, 400
+
+    try:
+        # First delete the face image from storage
+        delete_result = deleteFaceImageFromSystem(system_id=system_id, face_id=face_id)
+        if not delete_result.get('success'):
+            return {"error": f"Failed to delete face image: {delete_result.get('error')}"}, 500
+
+        # Then delete the face record from the database
+        result = deleteFaceFromSystem(system_id=system_id, face_id=face_id)
+        return {"data": result}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+    
+
+@app.route('/systems/delete-face', methods=['POST'])
+def delete_face_from_system_route():
+    payload = request.get_json() or {}
+    system_id = payload.get('system_id')
+    face_id = payload.get('face_id')
+
+    if not system_id or not face_id:
+        return {"error": "system_id and face_id required"}, 400
+
+    try:
+        result = deleteFaceFromSystem(system_id=system_id, face_id=face_id)
+        return {"data": result}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+    
+@app.route('/systems/alert', methods=['POST'])
+def alert_system_route():
+    payload = request.get_json() or {}
+    system_id = payload.get('system_id')
+    alert_status = payload.get('alert_status')
+
+    if not system_id or alert_status is None:
+        return {"error": "system_id and alert_status required"}, 400
+
+    try:
+        result = alertSystem(system_id=system_id, alert_status=alert_status)
+        return {"data": result}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+    
+@app.route('/systems/capture', methods=['POST'])
+def capture_safety_measure_route():
+    payload = request.get_json() or {}
+    system_id = payload.get('system_id')
+    image_data = payload.get('base64_image')
+    if not system_id or not image_data:
+        return {"error": "system_id and base64_image required"}, 400
+    try:
+        image = base64_to_image(_normalize_base64_payload(image_data))
+        upload = uploadImageToDetectSafetyMeasure(system_id=system_id, base64_image=image_data)
+        predict_safety_measure(image=image.convert("RGB"))
+        return {"data": res}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+    
+@app.route('/systems/add-room-code', methods=['POST'])
+def add_room_code_route():
+    payload = request.get_json() or {}
+    system_id = payload.get('system_id')
+    room_code = payload.get('room_code')
+
+    if not system_id or not room_code:
+        return {"error": "system_id and room_code required"}, 400
+
+    try:
+        result = addRoomCode(system_id=system_id, room_code=room_code)
+        return {"data": result}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)

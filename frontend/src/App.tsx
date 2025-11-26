@@ -4,8 +4,18 @@ import RegisterScreen from './pages/RegisterScreen';
 import HomeScreen from './pages/HomeScreen';
 import RegisterFaceScreen from './pages/RegisterFaceScreen';
 import LiveCameraScreen from './pages/LiveCameraScreen';
+import SystemsManagementScreen from './pages/SystemsManagementScreen';
+import ManageFacesScreen from './pages/ManageFacesScreen';
+import type { SystemRecord } from './types/system';
 
-type Screen = 'login' | 'register' | 'home' | 'register-face' | 'live-camera';
+type Screen =
+  | 'login'
+  | 'register'
+  | 'home'
+  | 'register-face'
+  | 'live-camera'
+  | 'systems'
+  | 'manage-faces';
 
 interface User {
   email: string;
@@ -15,24 +25,27 @@ interface User {
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [user, setUser] = useState<User | null>(null);
+  const [selectedSystem, setSelectedSystem] = useState<SystemRecord | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
-      setCurrentScreen('home');
+      setCurrentScreen('systems');
     }
   }, []);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
+    console.log('User logged in:', userData);
     localStorage.setItem('user', JSON.stringify(userData));
-    setCurrentScreen('home');
+    setCurrentScreen('systems');
   };
 
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    setSelectedSystem(null);
     setCurrentScreen('login');
   };
 
@@ -74,6 +87,25 @@ function App() {
             onBack={() => setCurrentScreen('home')}
           />
         );
+      case 'systems':
+        return user ? (
+          <SystemsManagementScreen
+            user={user}
+            onLogout={handleLogout}
+            onManageFaces={(system) => {
+              setSelectedSystem(system);
+              setCurrentScreen('manage-faces');
+            }}
+          />
+        ) : null;
+      case 'manage-faces':
+        return user && selectedSystem ? (
+          <ManageFacesScreen
+            userId={user.user_id}
+            system={selectedSystem}
+            onBack={() => setCurrentScreen('systems')}
+          />
+        ) : null;
       default:
         return null;
     }

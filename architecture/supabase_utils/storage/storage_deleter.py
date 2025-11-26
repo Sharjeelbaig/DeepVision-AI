@@ -7,3 +7,13 @@ def deleteFaceImage(email):
         return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
+    
+def deleteFaceImageFromSystem(system_id, face_id):
+    try:
+        path = f"public/{system_id}/{face_id}.jpg"
+        supabase_client.storage.from_("system_faces_bucket").remove([path])
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+__all__ = ["deleteFaceImage", "deleteFaceImageFromSystem"]
