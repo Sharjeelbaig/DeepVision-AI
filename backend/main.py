@@ -332,7 +332,7 @@ def capture_safety_measure_route():
     try:
         image = base64_to_image(_normalize_base64_payload(image_data))
         upload = uploadImageToDetectSafetyMeasure(system_id=system_id, base64_image=image_data)
-        predict_safety_measure(image=image.convert("RGB"))
+        res = predict_safety_measure(image=image.convert("RGB"))
         return {"data": res}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500
