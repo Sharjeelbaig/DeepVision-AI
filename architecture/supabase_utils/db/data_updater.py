@@ -44,3 +44,9 @@ def addRoomCode(system_id: int, room_code: str):
         "room_code": room_code
     }).eq("id", system_id).execute()
     return res.data
+
+def addMonitoredImageURL(system_id: int, image_url: str):
+    res = supabase_client.table("systems_data").update({
+        "monitored_image_url": image_url
+    }).eq("id", system_id).execute()
+    return res.data

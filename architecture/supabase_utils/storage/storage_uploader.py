@@ -31,7 +31,7 @@ def uploadImageToDetectSafetyMeasure(system_id: str, base64_image: str):
     supabase_client.storage.from_("system_monitored_images_bucket").remove(["public/" + system_id + "/image.jpg"])
     try:
         supabase_client.storage.from_("system_monitored_images_bucket").upload("public/" + system_id + "/image.jpg", file=data)
-        return {"success": True}
+        return {"success": True, "url": supabase_client.storage.from_("system_monitored_images_bucket").get_public_url("public/" + system_id + "/image.jpg")}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
