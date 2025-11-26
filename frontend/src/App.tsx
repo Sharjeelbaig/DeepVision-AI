@@ -6,6 +6,7 @@ import RegisterFaceScreen from './pages/RegisterFaceScreen';
 import LiveCameraScreen from './pages/LiveCameraScreen';
 import SystemsManagementScreen from './pages/SystemsManagementScreen';
 import ManageFacesScreen from './pages/ManageFacesScreen';
+import ViewSystemScreen from './pages/ViewSystemScreen';
 import type { SystemRecord } from './types/system';
 
 type Screen =
@@ -15,7 +16,8 @@ type Screen =
   | 'register-face'
   | 'live-camera'
   | 'systems'
-  | 'manage-faces';
+  | 'manage-faces'
+  | 'view-system';
 
 interface User {
   email: string;
@@ -96,11 +98,23 @@ function App() {
               setSelectedSystem(system);
               setCurrentScreen('manage-faces');
             }}
+            onViewSystem={(system) => {
+              setSelectedSystem(system);
+              setCurrentScreen('view-system');
+            }}
           />
         ) : null;
       case 'manage-faces':
         return user && selectedSystem ? (
           <ManageFacesScreen
+            userId={user.user_id}
+            system={selectedSystem}
+            onBack={() => setCurrentScreen('systems')}
+          />
+        ) : null;
+      case 'view-system':
+        return user && selectedSystem ? (
+          <ViewSystemScreen
             userId={user.user_id}
             system={selectedSystem}
             onBack={() => setCurrentScreen('systems')}

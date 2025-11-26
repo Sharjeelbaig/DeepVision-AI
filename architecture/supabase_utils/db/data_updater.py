@@ -50,3 +50,10 @@ def addMonitoredImageURL(system_id: int, image_url: str):
         "monitored_image_url": image_url
     }).eq("id", system_id).execute()
     return res.data
+
+def addMonitoredDataJSONB(system_id: int, data: dict):
+    res = supabase_client.table("systems_data").update({
+        "monitored_data": data
+    }).eq("id", system_id).execute()
+    print(res)
+    return res.data

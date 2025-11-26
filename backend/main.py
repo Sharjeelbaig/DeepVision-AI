@@ -19,7 +19,7 @@ from architecture.supabase_utils.storage.storage_deleter import deleteFaceImage,
 from architecture.supabase_utils.db.data_reader import getUserProfile, getSystemInfo
 from architecture.supabase_utils.db.data_writer import create_system
 from architecture.supabase_utils.db.data_deleter import deleteFaceFromSystem
-from architecture.supabase_utils.db.data_updater import updateFaceToSystem, alertSystem, addRoomCode, addMonitoredImageURL
+from architecture.supabase_utils.db.data_updater import updateFaceToSystem, alertSystem, addRoomCode, addMonitoredImageURL, addMonitoredDataJSONB
 from architecture.supabase_utils.main import supabase_client
 from architecture.utils.b64_to_image import base64_to_image
 from architecture.transformers_utils.main import predict_safety_measure
@@ -334,6 +334,10 @@ def capture_safety_measure_route():
         upload = uploadImageToDetectSafetyMeasure(system_id=system_id, base64_image=image_data)
         addMonitoredImageURL(system_id=system_id, image_url=upload.get('url'))
         res = predict_safety_measure(image=image.convert("RGB"))
+        addMonitoredDataJSONB(system_id=system_id, data=res)
+        # faces (array which contains all faces saved in db for that system)
+        # loop through faces and compare with image_data
+        # attach it with the name_of_person in the final res
         return {"data": res}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500

@@ -7,11 +7,12 @@ interface SystemsManagementScreenProps {
   user: { email: string; user_id: string };
   onLogout: () => void;
   onManageFaces: (system: SystemRecord) => void;
+  onViewSystem: (system: SystemRecord) => void;
 }
 
 const API_BASE = 'http://127.0.0.1:5000';
 
-const SystemsManagementScreen = ({ user, onLogout, onManageFaces }: SystemsManagementScreenProps) => {
+const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }: SystemsManagementScreenProps) => {
   const [systems, setSystems] = useState<SystemRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -259,14 +260,23 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces }: SystemsManag
                   className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-lg flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center">
-                        <Users className="w-6 h-6 text-white" />
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-2xl font-semibold text-white">{system.system_name}</h2>
+                          <p className="text-sm text-slate-400">System ID: {system.id}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h2 className="text-2xl font-semibold text-white">{system.system_name}</h2>
-                        <p className="text-sm text-slate-400">System ID: {system.id}</p>
-                      </div>
+                      <button
+                        type="button"
+                        className="shrink-0 px-3 py-1 text-sm rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+                        onClick={() => onViewSystem(system)}
+                      >
+                        View
+                      </button>
                     </div>
                     <dl className="grid grid-cols-2 gap-4 text-sm text-slate-300">
                       <div>
