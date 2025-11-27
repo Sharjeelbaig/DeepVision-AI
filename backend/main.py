@@ -74,6 +74,40 @@ def _coerce_system_identifier(system_id: Any) -> Any:
     return system_id
 
 
+def _resolve_system_id(system_id: Any, room_code: Optional[str]) -> Any:
+    """Resolve a system identifier using either a direct ID or a room code."""
+    if system_id is not None and str(system_id).strip():
+        return _coerce_system_identifier(system_id)
+
+    if not isinstance(room_code, str) or not room_code.strip():
+        raise ValueError("system_id or room_code required")
+
+    normalized_code = room_code.strip()
+    try:
+        response = (
+            supabase_client
+            .table("systems_data")
+            .select("id")
+            .eq("room_code", normalized_code)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        raise RuntimeError(f"Failed to resolve system by room_code: {exc}") from exc
+
+    data = getattr(response, "data", None)
+    if isinstance(data, list):
+        record = data[0] if data else None
+    else:
+        record = data
+
+    system_record_id = record.get("id") if isinstance(record, dict) else None
+    if system_record_id is None:
+        raise LookupError("system not found for provided room_code")
+
+    return _coerce_system_identifier(system_record_id)
+
+
 def _fetch_system_faces(system_id: Any) -> List[Dict[str, Any]]:
     identifier = _coerce_system_identifier(system_id)
     try:
@@ -448,14 +482,31 @@ def alert_system_route():
 def capture_safety_measure_route():
     payload = request.get_json() or {}
     system_id = payload.get('system_id')
+    room_code = payload.get('room_code')
     image_data = payload.get('base64_image')
-    if not system_id or not image_data:
-        return {"error": "system_id and base64_image required"}, 400
+    if not image_data:
+        return {"error": "base64_image required"}, 400
+
+    try:
+        resolved_system_id = _resolve_system_id(system_id, room_code)
+    except ValueError as exc:
+        return {"error": str(exc)}, 400
+    except LookupError as exc:
+        return {"error": str(exc)}, 404
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+
+    numeric_system_id = resolved_system_id
+    try:
+        numeric_system_id = int(numeric_system_id)
+    except (ValueError, TypeError):
+        return {"error": "invalid system_id"}, 400
+
     try:
         normalized_frame_b64 = _normalize_base64_payload(image_data)
         image = base64_to_image(normalized_frame_b64)
 
-        storage_system_id = str(system_id)
+        storage_system_id = str(numeric_system_id)
         upload = uploadImageToDetectSafetyMeasure(system_id=storage_system_id, base64_image=image_data)
         upload_success = isinstance(upload, dict) and upload.get('success') is True
         upload_url = upload.get('url') if isinstance(upload, dict) else None
@@ -463,13 +514,13 @@ def capture_safety_measure_route():
             error_detail = upload.get('error') if isinstance(upload, dict) else "unknown upload response"
             raise ValueError(f"Failed to upload monitored image: {error_detail}")
         if isinstance(upload_url, str) and upload_url.strip():
-            addMonitoredImageURL(system_id=system_id, image_url=upload_url)
+            addMonitoredImageURL(system_id=numeric_system_id, image_url=upload_url)
 
         detections = predict_safety_measure(image=image.convert("RGB"))
-        face_matches = _compare_system_faces(system_id=system_id, capture_base64=normalized_frame_b64)
+        face_matches = _compare_system_faces(system_id=numeric_system_id, capture_base64=normalized_frame_b64)
         combined_payload = _merge_detections_with_faces(detections, face_matches)
 
-        addMonitoredDataJSONB(system_id=system_id, data=combined_payload)
+        addMonitoredDataJSONB(system_id=numeric_system_id, data=combined_payload)
         return {"data": combined_payload}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500
