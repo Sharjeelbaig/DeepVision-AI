@@ -186,7 +186,7 @@ const CameraScreen = ({ roomCode, onCaptureComplete, onCancel }: CameraScreenPro
                   ? 'Capture failed'
                   : 'Capture scheduled'}
           </strong>
-          {state === 'countdown' && <p>Hold steady. A frame will be captured automatically.</p>}
+          {state === 'countdown' && <p>Monitoring</p>}
           {state === 'capturing' && <p>Sending the captured frame to the server.</p>}
           {state === 'success' && <p>Processing results...</p>}
           {state === 'error' && <p>{error ?? 'An unexpected error occurred while capturing the frame.'}</p>}

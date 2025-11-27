@@ -451,7 +451,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
                       <div>
                         <dt className="text-slate-400">Alert</dt>
                         <dd className={system.alert ? 'text-amber-300' : 'text-emerald-300'}>
-                          {system.alert ? 'Active' : 'Standby'}
+                          {system.alert ? 'Suspicious Detected' : 'All Clear'}
                         </dd>
                       </div>
                       <div>
