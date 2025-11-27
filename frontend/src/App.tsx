@@ -7,6 +7,7 @@ import LiveCameraScreen from './pages/LiveCameraScreen';
 import SystemsManagementScreen from './pages/SystemsManagementScreen';
 import ManageFacesScreen from './pages/ManageFacesScreen';
 import ViewSystemScreen from './pages/ViewSystemScreen';
+import UserProfileScreen from './pages/UserProfileScreen.tsx';
 import type { SystemRecord } from './types/system';
 
 type Screen =
@@ -17,7 +18,8 @@ type Screen =
   | 'live-camera'
   | 'systems'
   | 'manage-faces'
-  | 'view-system';
+  | 'view-system'
+  | 'profile';
 
 interface User {
   name: string;
@@ -50,6 +52,17 @@ function App() {
     localStorage.removeItem('user');
     setSelectedSystem(null);
     setCurrentScreen('login');
+  };
+
+  const handleUserUpdated = (updates: Partial<User>) => {
+    setUser((previous) => {
+      if (!previous) {
+        return previous;
+      }
+      const next = { ...previous, ...updates };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
   };
 
   const renderScreen = () => {
@@ -103,6 +116,7 @@ function App() {
               setSelectedSystem(system);
               setCurrentScreen('view-system');
             }}
+            onViewProfile={() => setCurrentScreen('profile')}
           />
         ) : null;
       case 'manage-faces':
@@ -119,6 +133,14 @@ function App() {
             userId={user.user_id}
             system={selectedSystem}
             onBack={() => setCurrentScreen('systems')}
+          />
+        ) : null;
+      case 'profile':
+        return user ? (
+          <UserProfileScreen
+            user={user}
+            onBack={() => setCurrentScreen('systems')}
+            onUserUpdated={handleUserUpdated}
           />
         ) : null;
       default:

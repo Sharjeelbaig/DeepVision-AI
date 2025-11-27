@@ -497,6 +497,32 @@ def update_user_info_route():
     bio = payload.get('bio')
     name = payload.get('name')
     base64_image = payload.get('base64_image')
+
+    if not isinstance(email, str) or not email.strip():
+        return {"error": "email required"}, 400
+
+    try:
+        user_lookup = (
+            supabase_client
+            .table("user_data")
+            .select("id")
+            .eq("email", email.strip())
+            .single()
+            .execute()
+        )
+        user_record = getattr(user_lookup, "data", None)
+        user_id = user_record.get("id") if isinstance(user_record, dict) else None
+    except Exception as exc:
+        return {"error": f"Failed to resolve user: {str(exc)}"}, 500
+
+    if user_id is None:
+        return {"error": "user not found"}, 404
+
+    try:
+        numeric_user_id = int(user_id)
+    except (ValueError, TypeError):
+        return {"error": "invalid user id"}, 500
+
     if base64_image:
         image_upload = uploadFaceImage(email=email, base64_image=base64_image)
         if not image_upload.get('success'):
@@ -505,14 +531,14 @@ def update_user_info_route():
             image_url = image_upload.get('url')
             if isinstance(image_url, str):
                 try:
-                    updateUserImage(user_id=email, image_url=image_url)
+                    updateUserImage(user_id=numeric_user_id, image_url=image_url)
                 except Exception as exc:
                     return {"error": f"Failed to update user image URL: {str(exc)}"}, 500
     try:
         if isinstance(bio, str):
-            updateUserBio(user_id=email, new_bio=bio)
+            updateUserBio(user_id=numeric_user_id, new_bio=bio)
         if isinstance(name, str):
-            updateUserName(user_id=email, new_name=name)
+            updateUserName(user_id=numeric_user_id, new_name=name)
         return {"success": True}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500

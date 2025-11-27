@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LogOut, PlusCircle, RefreshCw, Users } from 'lucide-react';
+import { LogOut, PlusCircle, RefreshCw, User, Users } from 'lucide-react';
 import type { SystemRecord } from '../types/system';
 import { normalizeSystemRecord } from '../types/system';
 
@@ -8,13 +8,14 @@ interface SystemsManagementScreenProps {
   onLogout: () => void;
   onManageFaces: (system: SystemRecord) => void;
   onViewSystem: (system: SystemRecord) => void;
+  onViewProfile: () => void;
 }
 
 // const API_BASE = 'http://127.0.0.1:5000';
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
 
 
-const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }: SystemsManagementScreenProps) => {
+const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, onViewProfile }: SystemsManagementScreenProps) => {
   const [systems, setSystems] = useState<SystemRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +34,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
     const initial = typeof user.name === 'string' ? user.name.trim() : '';
     return initial;
   });
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
   const loadSystems = useCallback(async () => {
     setError(null);
@@ -86,6 +88,12 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
       const profile = payload?.data;
       if (profile && typeof profile === 'object') {
         const record = profile as Record<string, unknown>;
+        const imageCandidate = record.image_url ?? record.avatar_url ?? record.avatarUrl;
+        if (typeof imageCandidate === 'string' && imageCandidate.trim()) {
+          setProfileImageUrl(imageCandidate.trim());
+        } else {
+          setProfileImageUrl(null);
+        }
         const candidateName =
           typeof record.full_name === 'string' && record.full_name.trim()
             ? record.full_name.trim()
@@ -107,6 +115,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
 
       const fallback = typeof user.email === 'string' && user.email.trim() ? user.email.trim() : 'User';
       setProfileName(fallback);
+      setProfileImageUrl(null);
     } catch (profileError) {
       console.error('Failed to load user profile', profileError);
       const preferred = typeof user.name === 'string' && user.name.trim()
@@ -115,6 +124,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
           ? user.email.trim()
           : 'User';
       setProfileName(preferred);
+      setProfileImageUrl(null);
     }
   }, [user.email, user.name]);
 
@@ -264,6 +274,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
   }, [systems, hasSystems]);
 
   const displayName = profileName || user.email || 'User';
+  const avatarSrc = profileImageUrl && profileImageUrl.trim() ? profileImageUrl.trim() : null;
 
   return (
     <div className="min-h-screen p-6">
@@ -271,7 +282,21 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <p className="text-sm uppercase tracking-widest text-slate-400 mb-1">Systems Management</p>
-            <h1 className="text-4xl font-bold text-white">Welcome, {displayName}</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-4xl font-bold text-white">Welcome, {displayName}</h1>
+              <button
+                type="button"
+                onClick={onViewProfile}
+                className="relative w-12 h-12 rounded-full border border-white/20 overflow-hidden flex items-center justify-center bg-white/10 hover:bg-white/20 transition"
+                aria-label="View profile settings"
+              >
+                {avatarSrc ? (
+                  <img src={avatarSrc} alt={`${displayName} avatar`} className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-6 h-6 text-white/80" />
+                )}
+              </button>
+            </div>
             <p className="text-slate-300 mt-2">{systemSummaryText}</p>
           </div>
           <div className="flex flex-wrap gap-3">
