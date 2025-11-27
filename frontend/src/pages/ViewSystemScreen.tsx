@@ -70,11 +70,27 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
     return details.monitored_data ?? null;
   }, [details.monitored_data]);
 
+  const formatConfidence = useCallback((value: unknown): string => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const normalized = value <= 1 ? value * 100 : value;
+      return `${normalized.toFixed(1)}%`;
+    }
+    if (typeof value === 'string') {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        const normalized = parsed <= 1 ? parsed * 100 : parsed;
+        return `${normalized.toFixed(1)}%`;
+      }
+      const trimmed = value.trim();
+      return trimmed ? trimmed : 'N/A';
+    }
+    return 'N/A';
+  }, []);
+
   const detectionBox = detection?.box ?? null;
-  const detectionScore =
-    typeof detection?.score === 'number' && Number.isFinite(detection.score)
-      ? `${(detection.score * 100).toFixed(1)}%`
-      : 'N/A';
+  const detectionScore = formatConfidence(detection?.score);
+  const recognizedFaces = detection?.recognized_faces ?? null;
+  const hasRecognizedFaces = Boolean(recognizedFaces && recognizedFaces.length);
 
   return (
     <div className="min-h-screen p-6">
@@ -138,29 +154,86 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
               <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
                 <h2 className="text-lg font-semibold text-white mb-4">Detection Summary</h2>
                 {detection ? (
-                  <dl className="space-y-3 text-sm text-slate-300">
-                    <div className="flex items-center justify-between">
-                      <dt className="text-slate-400">Label</dt>
-                      <dd className="text-white">{detection.label ?? 'Unknown'}</dd>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <dt className="text-slate-400">Confidence</dt>
-                      <dd className="text-white">{detectionScore}</dd>
-                    </div>
-                    {detectionBox ? (
-                      <div>
-                        <dt className="text-slate-400 mb-1">Bounding Box</dt>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                          <span>X Min: <span className="text-white">{detectionBox.xmin ?? '—'}</span></span>
-                          <span>X Max: <span className="text-white">{detectionBox.xmax ?? '—'}</span></span>
-                          <span>Y Min: <span className="text-white">{detectionBox.ymin ?? '—'}</span></span>
-                          <span>Y Max: <span className="text-white">{detectionBox.ymax ?? '—'}</span></span>
+                  <div className="space-y-5">
+                    <dl className="space-y-3 text-sm text-slate-300">
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-400">Label</dt>
+                        <dd className="text-white">{detection.label ?? 'Unknown'}</dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-400">Confidence</dt>
+                        <dd className="text-white">{detectionScore}</dd>
+                      </div>
+                      {/* {detectionBox ? (
+                        <div>
+                          <dt className="text-slate-400 mb-1">Bounding Box</dt>
+                          <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                            <span>X Min: <span className="text-white">{detectionBox.xmin ?? '—'}</span></span>
+                            <span>X Max: <span className="text-white">{detectionBox.xmax ?? '—'}</span></span>
+                            <span>Y Min: <span className="text-white">{detectionBox.ymin ?? '—'}</span></span>
+                            <span>Y Max: <span className="text-white">{detectionBox.ymax ?? '—'}</span></span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-slate-400">No bounding box data available.</div>
+                      )} */}
+                    </dl>
+
+                    {hasRecognizedFaces ? (
+                      <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-slate-200">Face Recognized:</h3>
+                        <div className="space-y-3">
+                          {recognizedFaces?.map((face, index) => {
+                            const personName = face.name_of_person ?? 'Unnamed Person';
+                            const faceKey = face.face_id ?? `${personName}-${index}`;
+                            const matchStatus = face.isMatch === true
+                              ? 'Match'
+                              : face.isMatch === false
+                                ? 'No Match'
+                                : 'Unknown';
+                            const matchColor = face.isMatch === true
+                              ? 'text-emerald-400'
+                              : face.isMatch === false
+                                ? 'text-rose-400'
+                                : 'text-slate-400';
+                            const confidenceText = formatConfidence(face.confidence);
+
+                            return (
+                              <div
+                                key={faceKey}
+                                className="rounded-xl border border-white/10 bg-white/5 p-4"
+                              >
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <p className="text-white font-medium">{personName}</p>
+                                  <span className={`text-xs font-semibold uppercase tracking-wide ${matchColor}`}>
+                                    {matchStatus}
+                                  </span>
+                                </div>
+                                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400">
+                                  <span>Confidence: <span className="text-white">{confidenceText}</span></span>
+                                  <span>Face ID: <span className="text-white">{face.face_id ?? '—'}</span></span>
+                                  <span>Result: <span className="text-white">{face.result ?? '—'}</span></span>
+                                  <span>Error: <span className="text-white">{face.error ?? '—'}</span></span>
+                                </div>
+                                {face.face_url ? (
+                                  <a
+                                    href={face.face_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-3 inline-flex text-xs text-blue-300 hover:text-blue-200"
+                                  >
+                                    View stored reference
+                                  </a>
+                                ) : null}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ) : (
-                      <div className="text-slate-400">No bounding box data available.</div>
+                      <p className="text-sm text-slate-400">No recognized faces in the latest capture.</p>
                     )}
-                  </dl>
+                  </div>
                 ) : (
                   <p className="text-slate-400">No monitoring data captured yet.</p>
                 )}

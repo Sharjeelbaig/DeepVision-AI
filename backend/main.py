@@ -1,7 +1,7 @@
 import base64
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from flask import Flask, request
 from flask_cors import CORS
@@ -59,6 +59,124 @@ def _format_face_result(raw_result: Any) -> Dict[str, Any]:
         "confidence": 1.0 if is_match else 0.0,
         "result": result_text,
     }
+
+
+def _coerce_system_identifier(system_id: Any) -> Any:
+    """Best-effort conversion so Supabase lookups work with str or int IDs."""
+    if isinstance(system_id, str):
+        candidate = system_id.strip()
+        if candidate.isdigit():
+            try:
+                return int(candidate)
+            except ValueError:
+                return candidate
+        return candidate
+    return system_id
+
+
+def _fetch_system_faces(system_id: Any) -> List[Dict[str, Any]]:
+    identifier = _coerce_system_identifier(system_id)
+    try:
+        response = (
+            supabase_client
+            .table("systems_data")
+            .select("faces")
+            .eq("id", identifier)
+            .single()
+            .execute()
+        )
+    except Exception as exc:
+        print(f"Failed to fetch faces for system {system_id}: {exc}")
+        return []
+
+    record = getattr(response, "data", None)
+    if not isinstance(record, dict):
+        return []
+
+    faces = record.get("faces") or []
+    if not isinstance(faces, list):
+        return []
+
+    return [face for face in faces if isinstance(face, dict)]
+
+
+def _compare_system_faces(system_id: Any, capture_base64: str) -> List[Dict[str, Any]]:
+    matches: List[Dict[str, Any]] = []
+    if not capture_base64:
+        return matches
+
+    faces = _fetch_system_faces(system_id)
+    for face in faces:
+        face_url = face.get("face_url")
+        if not isinstance(face_url, str) or not face_url.strip():
+            continue
+
+        name = face.get("name_of_person") if isinstance(face.get("name_of_person"), str) else None
+        face_id = face.get("face_id")
+        face_identifier = str(face_id) if face_id is not None else None
+
+        try:
+            raw_result = recognizeFace(face_url, capture_base64)
+            formatted = _format_face_result(raw_result)
+            match_payload = {
+                "face_id": face_identifier,
+                "name_of_person": name,
+                "face_url": face_url,
+                **formatted,
+            }
+        except RequestException as exc:
+            match_payload = {
+                "face_id": face_identifier,
+                "name_of_person": name,
+                "face_url": face_url,
+                "isMatch": False,
+                "confidence": 0.0,
+                "error": f"Face asset fetch failed: {exc}",
+            }
+        except Exception as exc:
+            match_payload = {
+                "face_id": face_identifier,
+                "name_of_person": name,
+                "face_url": face_url,
+                "isMatch": False,
+                "confidence": 0.0,
+                "error": str(exc),
+            }
+
+        matches.append(match_payload)
+
+    return matches
+
+
+def _merge_detections_with_faces(detections: Any, face_matches: List[Dict[str, Any]]) -> Any:
+    matches_payload = [dict(match) for match in face_matches]
+
+    if isinstance(detections, list):
+        normalized: List[Dict[str, Any]] = []
+        for item in detections:
+            if isinstance(item, dict):
+                normalized.append({**item})
+            else:
+                normalized.append({"value": item})
+
+        if normalized:
+            normalized[0]["recognized_faces"] = matches_payload
+        else:
+            normalized.append({
+                "label": None,
+                "score": None,
+                "box": None,
+                "recognized_faces": matches_payload,
+            })
+
+        return normalized
+
+    if isinstance(detections, dict):
+        merged = {**detections}
+        merged["recognized_faces"] = matches_payload
+        return merged
+
+    return {"recognized_faces": matches_payload}
 
 
 app = Flask(__name__)
@@ -264,8 +382,12 @@ def add_face_to_system_route():
     if not system_id or not face_base64 or not name_of_person:
         return {"error": "system_id, face_base64 and name_of_person required"}, 400
     try:
-        face_url = uploadFaceImageToSystem(system_id=str(system_id), base64_image=face_base64, face_id=str(system_id)+"_"+name_of_person)
-        result = updateFaceToSystem(system_id=system_id, face_url=face_url.get('url'), name_of_person=name_of_person)
+        upload = uploadFaceImageToSystem(system_id=str(system_id), base64_image=face_base64, face_id=str(system_id)+"_"+name_of_person)
+        stored_face_url = upload.get('url') if isinstance(upload, dict) else None
+        if not isinstance(stored_face_url, str) or not stored_face_url.strip():
+            return {"error": "Failed to persist face image"}, 500
+
+        result = updateFaceToSystem(system_id=system_id, face_url=stored_face_url, name_of_person=name_of_person)
         return {"data": result}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500
@@ -330,15 +452,25 @@ def capture_safety_measure_route():
     if not system_id or not image_data:
         return {"error": "system_id and base64_image required"}, 400
     try:
-        image = base64_to_image(_normalize_base64_payload(image_data))
-        upload = uploadImageToDetectSafetyMeasure(system_id=system_id, base64_image=image_data)
-        addMonitoredImageURL(system_id=system_id, image_url=upload.get('url'))
-        res = predict_safety_measure(image=image.convert("RGB"))
-        addMonitoredDataJSONB(system_id=system_id, data=res)
-        # faces (array which contains all faces saved in db for that system)
-        # loop through faces and compare with image_data
-        # attach it with the name_of_person in the final res
-        return {"data": res}, 200
+        normalized_frame_b64 = _normalize_base64_payload(image_data)
+        image = base64_to_image(normalized_frame_b64)
+
+        storage_system_id = str(system_id)
+        upload = uploadImageToDetectSafetyMeasure(system_id=storage_system_id, base64_image=image_data)
+        upload_success = isinstance(upload, dict) and upload.get('success') is True
+        upload_url = upload.get('url') if isinstance(upload, dict) else None
+        if not upload_success:
+            error_detail = upload.get('error') if isinstance(upload, dict) else "unknown upload response"
+            raise ValueError(f"Failed to upload monitored image: {error_detail}")
+        if isinstance(upload_url, str) and upload_url.strip():
+            addMonitoredImageURL(system_id=system_id, image_url=upload_url)
+
+        detections = predict_safety_measure(image=image.convert("RGB"))
+        face_matches = _compare_system_faces(system_id=system_id, capture_base64=normalized_frame_b64)
+        combined_payload = _merge_detections_with_faces(detections, face_matches)
+
+        addMonitoredDataJSONB(system_id=system_id, data=combined_payload)
+        return {"data": combined_payload}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500
     

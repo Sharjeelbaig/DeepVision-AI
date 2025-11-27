@@ -12,10 +12,22 @@ export interface MonitoredDetectionBox {
   [key: string]: number | null | undefined;
 }
 
+export interface MonitoredFaceMatch {
+  face_id?: string | null;
+  face_url?: string | null;
+  name_of_person?: string | null;
+  isMatch?: boolean | null;
+  confidence?: number | null;
+  result?: string | null;
+  error?: string | null;
+  [key: string]: unknown;
+}
+
 export interface MonitoredDetection {
   box?: MonitoredDetectionBox | null;
   label?: string | null;
   score?: number | null;
+  recognized_faces?: MonitoredFaceMatch[] | null;
   [key: string]: unknown;
 }
 
@@ -84,6 +96,69 @@ const toFiniteNumber = (value: unknown): number | null => {
   return null;
 };
 
+const toOptionalBoolean = (value: unknown): boolean | null => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim().toLowerCase();
+    if (trimmed === 'true') {
+      return true;
+    }
+    if (trimmed === 'false') {
+      return false;
+    }
+  }
+  if (typeof value === 'number') {
+    if (value === 1) {
+      return true;
+    }
+    if (value === 0) {
+      return false;
+    }
+  }
+  return null;
+};
+
+const normalizeRecognizedFaces = (faces: unknown): MonitoredFaceMatch[] | null => {
+  if (!Array.isArray(faces) || faces.length === 0) {
+    return null;
+  }
+
+  const normalized: MonitoredFaceMatch[] = [];
+
+  faces.forEach((face) => {
+    if (!face || typeof face !== 'object') {
+      return;
+    }
+
+    const candidate = face as Record<string, unknown>;
+    const faceId = normalizeFaceId(candidate.face_id ?? candidate.id ?? candidate.faceId);
+    const faceUrl = typeof candidate.face_url === 'string' ? candidate.face_url : null;
+    const name = typeof candidate.name_of_person === 'string' ? candidate.name_of_person : null;
+    const match = toOptionalBoolean(candidate.isMatch ?? candidate.match ?? candidate.success);
+    const confidence = toFiniteNumber(candidate.confidence);
+    const result = typeof candidate.result === 'string' ? candidate.result : null;
+    const error = typeof candidate.error === 'string' ? candidate.error : null;
+
+    if (!faceId && !faceUrl && !name && match === null && confidence === null && !result && !error) {
+      return;
+    }
+
+    normalized.push({
+      face_id: faceId || null,
+      face_url: faceUrl,
+      name_of_person: name,
+      isMatch: match,
+      confidence,
+      result,
+      error,
+    });
+  });
+
+  return normalized.length ? normalized : null;
+};
+
 export const normalizeMonitoredData = (raw: unknown): MonitoredDetection | null => {
   if (!raw) {
     return null;
@@ -117,6 +192,9 @@ export const normalizeMonitoredData = (raw: unknown): MonitoredDetection | null 
   const detection = candidate as Record<string, unknown>;
   const boxRaw = detection.box;
   let normalizedBox: MonitoredDetectionBox | null = null;
+  const recognizedFaces = normalizeRecognizedFaces(
+    detection.recognized_faces ?? detection.recognizedFaces,
+  );
 
   if (boxRaw && typeof boxRaw === 'object' && !Array.isArray(boxRaw)) {
     const boxCandidate = boxRaw as Record<string, unknown>;
@@ -143,6 +221,7 @@ export const normalizeMonitoredData = (raw: unknown): MonitoredDetection | null 
     box: normalizedBox,
     label,
     score,
+    recognized_faces: recognizedFaces,
   };
 };
 

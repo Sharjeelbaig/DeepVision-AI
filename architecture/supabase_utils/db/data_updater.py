@@ -1,4 +1,6 @@
 import random
+from typing import Any
+
 from ..main import supabase_client
 def updateUserImage(user_id: int, image_url: str):
     res = supabase_client.table("user_data").update({
@@ -20,7 +22,9 @@ def updateUserBio(user_id: int, new_bio: str):
 
 def updateFaceToSystem(system_id: int, face_url: str, name_of_person: str):
     system_data = supabase_client.table("systems_data").select("faces").eq("id", system_id).single().execute()
-    faces = system_data.data.get("faces") or []
+    record = getattr(system_data, "data", None)
+    faces_data = record.get("faces") if isinstance(record, dict) else None
+    faces = list(faces_data) if isinstance(faces_data, list) else []
     new_face_id = random.randint(1000, 9999)
     faces.append({
         "face_id": new_face_id,
@@ -51,7 +55,7 @@ def addMonitoredImageURL(system_id: int, image_url: str):
     }).eq("id", system_id).execute()
     return res.data
 
-def addMonitoredDataJSONB(system_id: int, data: dict):
+def addMonitoredDataJSONB(system_id: int, data: Any):
     res = supabase_client.table("systems_data").update({
         "monitored_data": data
     }).eq("id", system_id).execute()
