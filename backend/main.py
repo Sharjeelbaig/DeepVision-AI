@@ -19,7 +19,7 @@ from architecture.supabase_utils.storage.storage_deleter import deleteFaceImage,
 from architecture.supabase_utils.db.data_reader import getUserProfile, getSystemInfo
 from architecture.supabase_utils.db.data_writer import create_system
 from architecture.supabase_utils.db.data_deleter import deleteFaceFromSystem
-from architecture.supabase_utils.db.data_updater import updateFaceToSystem, alertSystem, addRoomCode, addMonitoredImageURL, addMonitoredDataJSONB
+from architecture.supabase_utils.db.data_updater import updateFaceToSystem, alertSystem, addRoomCode, addMonitoredImageURL, addMonitoredDataJSONB, updateUserBio, updateUserImage, updateUserName
 from architecture.supabase_utils.main import supabase_client
 from architecture.utils.b64_to_image import base64_to_image
 from architecture.transformers_utils.main import predict_safety_measure
@@ -486,6 +486,34 @@ def add_room_code_route():
     try:
         result = addRoomCode(system_id=system_id, room_code=room_code)
         return {"data": result}, 200
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+    
+
+@app.route('/users/update-info', methods=['POST'])
+def update_user_info_route():
+    payload = request.get_json() or {}
+    email = payload.get('email')
+    bio = payload.get('bio')
+    name = payload.get('name')
+    base64_image = payload.get('base64_image')
+    if base64_image:
+        image_upload = uploadFaceImage(email=email, base64_image=base64_image)
+        if not image_upload.get('success'):
+            return {"error": f"Failed to upload image: {image_upload.get('error')}"}, 500
+        else:
+            image_url = image_upload.get('url')
+            if isinstance(image_url, str):
+                try:
+                    updateUserImage(user_id=email, image_url=image_url)
+                except Exception as exc:
+                    return {"error": f"Failed to update user image URL: {str(exc)}"}, 500
+    try:
+        if isinstance(bio, str):
+            updateUserBio(user_id=email, new_bio=bio)
+        if isinstance(name, str):
+            updateUserName(user_id=email, new_name=name)
+        return {"success": True}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500
 

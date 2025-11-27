@@ -8,7 +8,7 @@ def uploadFaceImage(email: str, base64_image: str):
     supabase_client.storage.from_("user_data_bucket").remove(["public/" + email + "/face.jpg"])
     try:
         supabase_client.storage.from_("user_data_bucket").upload("public/" + email + "/face.jpg", file=data)
-        return {"success": True}
+        return {"success": True, "url": supabase_client.storage.from_("user_data_bucket").get_public_url("public/" + email + "/face.jpg")}
     except Exception as e:
         return {"success": False, "error": str(e)}
     

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { LogIn, AlertCircle } from 'lucide-react';
 
 interface LoginScreenProps {
-  onLogin: (user: { email: string; user_id: string }) => void;
+  onLogin: (user: { name: string; email: string; user_id: string }) => void;
   onSwitchToRegister: () => void;
 }
 
@@ -25,6 +25,7 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
       });
 
       const data = await response.json();
+
 
       const hasSuccessSignal = data.success === true;
       const hasUserPayload =

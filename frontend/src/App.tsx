@@ -20,6 +20,7 @@ type Screen =
   | 'view-system';
 
 interface User {
+  name: string;
   email: string;
   user_id: string;
 }

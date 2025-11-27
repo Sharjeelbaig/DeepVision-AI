@@ -4,13 +4,15 @@ import type { SystemRecord } from '../types/system';
 import { normalizeSystemRecord } from '../types/system';
 
 interface SystemsManagementScreenProps {
-  user: { email: string; user_id: string };
+  user: { name: string; email: string; user_id: string };
   onLogout: () => void;
   onManageFaces: (system: SystemRecord) => void;
   onViewSystem: (system: SystemRecord) => void;
 }
 
-const API_BASE = 'http://127.0.0.1:5000';
+// const API_BASE = 'http://127.0.0.1:5000';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+
 
 const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }: SystemsManagementScreenProps) => {
   const [systems, setSystems] = useState<SystemRecord[]>([]);
@@ -27,6 +29,10 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
   const [roomCodeError, setRoomCodeError] = useState<string | null>(null);
   const [roomCodeSubmitting, setRoomCodeSubmitting] = useState(false);
   const [selectedSystem, setSelectedSystem] = useState<SystemRecord | null>(null);
+  const [profileName, setProfileName] = useState<string>(() => {
+    const initial = typeof user.name === 'string' ? user.name.trim() : '';
+    return initial;
+  });
 
   const loadSystems = useCallback(async () => {
     setError(null);
@@ -59,9 +65,66 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
     }
   }, [user.user_id]);
 
+  const loadUserProfile = useCallback(async () => {
+    if (!user.email) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/users/profile?email=${encodeURIComponent(user.email)}`
+      );
+      const payload = await response.json();
+
+      if (!response.ok) {
+        const message = (payload && typeof payload === 'object' && 'error' in payload)
+          ? String((payload as { error: unknown }).error ?? 'Failed to load profile')
+          : 'Failed to load profile';
+        throw new Error(message);
+      }
+
+      const profile = payload?.data;
+      if (profile && typeof profile === 'object') {
+        const record = profile as Record<string, unknown>;
+        const candidateName =
+          typeof record.full_name === 'string' && record.full_name.trim()
+            ? record.full_name.trim()
+            : typeof record.name === 'string' && record.name.trim()
+              ? record.name.trim()
+              : typeof record.username === 'string' && record.username.trim()
+                ? record.username.trim()
+                : typeof record.display_name === 'string' && record.display_name.trim()
+                  ? record.display_name.trim()
+                  : typeof record.email === 'string' && record.email.trim()
+                    ? record.email.trim()
+                    : null;
+
+        if (candidateName) {
+          setProfileName(candidateName);
+          return;
+        }
+      }
+
+      const fallback = typeof user.email === 'string' && user.email.trim() ? user.email.trim() : 'User';
+      setProfileName(fallback);
+    } catch (profileError) {
+      console.error('Failed to load user profile', profileError);
+      const preferred = typeof user.name === 'string' && user.name.trim()
+        ? user.name.trim()
+        : typeof user.email === 'string' && user.email.trim()
+          ? user.email.trim()
+          : 'User';
+      setProfileName(preferred);
+    }
+  }, [user.email, user.name]);
+
   useEffect(() => {
     loadSystems();
   }, [loadSystems]);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, [loadUserProfile]);
 
   const openCreateModal = () => {
     setCreateError(null);
@@ -200,13 +263,15 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem }
     return `${systems.length} system${systems.length === 1 ? '' : 's'} • ${totalFaces} face${totalFaces === 1 ? '' : 's'} registered`;
   }, [systems, hasSystems]);
 
+  const displayName = profileName || user.email || 'User';
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <p className="text-sm uppercase tracking-widest text-slate-400 mb-1">Systems Management</p>
-            <h1 className="text-4xl font-bold text-white">Welcome, {user.email}</h1>
+            <h1 className="text-4xl font-bold text-white">Welcome, {displayName}</h1>
             <p className="text-slate-300 mt-2">{systemSummaryText}</p>
           </div>
           <div className="flex flex-wrap gap-3">
