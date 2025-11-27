@@ -33,7 +33,7 @@ const evaluateCaptureStatus = (payload: CaptureApiPayload): { shouldContinue: bo
   const primaryDetection = detections[0];
   const labelRaw = primaryDetection.label;
   const label = typeof labelRaw === 'string' ? labelRaw.trim().toLowerCase() : '';
-  const labelIsNormal = label === 'normal person';
+  const labelIsNormal = label === 'normal person' || label === 'no human';
 
   const recognizedFaces = primaryDetection.recognized_faces ?? (primaryDetection as { recognizedFaces?: unknown }).recognizedFaces;
   const facesArray = Array.isArray(recognizedFaces)
@@ -45,6 +45,19 @@ const evaluateCaptureStatus = (payload: CaptureApiPayload): { shouldContinue: bo
     const isMatch = face.isMatch === true;
     return resultText === 'OK' || isMatch;
   });
+
+  const allFacesReportNoFace = facesArray.length > 0 && facesArray.every((face) => {
+    const resultText = typeof face.result === 'string' ? face.result.trim().toLowerCase() : '';
+    return resultText.includes('no face');
+  });
+
+  const noFacesCaptured = facesArray.length === 0;
+
+  const noFaceDetected = (noFacesCaptured || allFacesReportNoFace) && (!label || label === 'normal person');
+
+  if (noFaceDetected) {
+    return { shouldContinue: true, shouldTriggerAlarm: false };
+  }
 
   const shouldContinue = labelIsNormal && hasPositiveMatch;
   const shouldTriggerAlarm = !labelIsNormal || !hasPositiveMatch;
