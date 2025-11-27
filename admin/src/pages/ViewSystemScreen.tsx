@@ -184,7 +184,7 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
                         <h3 className="text-sm font-semibold text-slate-200">Face Recognized:</h3>
                         <div className="space-y-3">
                           {recognizedFaces?.map((face, index) => {
-                            const personName = face.name_of_person ?? 'Unnamed Person';
+                            const personName = face.isMatch === false ? 'Unknown' : face.name_of_person ?? 'Unnamed Person';
                             const faceKey = face.face_id ?? `${personName}-${index}`;
                             const matchStatus = face.isMatch === true
                               ? 'Match'
