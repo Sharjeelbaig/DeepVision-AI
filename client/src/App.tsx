@@ -5,6 +5,8 @@ import CaptureResultScreen from './pages/CaptureResultScreen';
 import type { CaptureResult, CaptureApiPayload } from './types/capture';
 
 type Screen = 'room-code' | 'camera' | 'result';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:5000';
+// const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:5000';
 
 type DetectionRecord = Record<string, unknown>;
 
@@ -58,6 +60,17 @@ const App = () => {
   const [shouldAlarm, setShouldAlarm] = useState(false);
   const alarmAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  const sendAlert = useCallback((room: string, alertStatus: boolean) => {
+    if (!room) {
+      return;
+    }
+    void fetch(`${API_BASE}/systems/alert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room_code: room, alert_status: alertStatus }),
+    }).catch(() => undefined);
+  }, []);
+
   useEffect(() => {
     alarmAudioRef.current = new Audio('/alarm.wav');
     alarmAudioRef.current.loop = true;
@@ -107,6 +120,7 @@ const App = () => {
     setCaptureResult(null);
     setCameraSession((previous) => previous + 1);
     setShouldAlarm(false);
+    sendAlert(code, false);
     setScreen('camera');
   };
 
@@ -114,7 +128,14 @@ const App = () => {
     const evaluation = evaluateCaptureStatus(result.apiResponse);
     setCaptureResult(result);
     setShouldAlarm(evaluation.shouldTriggerAlarm);
+    if (roomCode) {
+      const alertStatus = evaluation.shouldTriggerAlarm;
+      sendAlert(roomCode, alertStatus);
+    }
     if (evaluation.shouldContinue) {
+      if (roomCode) {
+        sendAlert(roomCode, false);
+      }
       setCameraSession((previous) => previous + 1);
       setScreen('camera');
     } else {
@@ -136,6 +157,7 @@ const App = () => {
     setCaptureResult(null);
     setCameraSession((previous) => previous + 1);
     setShouldAlarm(false);
+    sendAlert(roomCode, false);
     setScreen('camera');
   };
 

@@ -467,13 +467,23 @@ def delete_face_from_system_route():
 def alert_system_route():
     payload = request.get_json() or {}
     system_id = payload.get('system_id')
+    room_code = payload.get('room_code')
     alert_status = payload.get('alert_status')
 
-    if not system_id or alert_status is None:
-        return {"error": "system_id and alert_status required"}, 400
+    if alert_status is None:
+        return {"error": "alert_status required"}, 400
 
     try:
-        result = alertSystem(system_id=system_id, alert_status=alert_status)
+        resolved_system_id = _resolve_system_id(system_id, room_code)
+    except ValueError as exc:
+        return {"error": str(exc)}, 400
+    except LookupError as exc:
+        return {"error": str(exc)}, 404
+    except Exception as exc:
+        return {"error": str(exc)}, 500
+
+    try:
+        result = alertSystem(system_id=resolved_system_id, alert_status=alert_status)
         return {"data": result}, 200
     except Exception as exc:
         return {"error": str(exc)}, 500
