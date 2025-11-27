@@ -46,6 +46,44 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
   });
   const [profileImageKey, setProfileImageKey] = useState<string>(() => Date.now().toString());
 
+  const generateRoomCode = useCallback(() => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const length = 4;
+    let code = '';
+    for (let index = 0; index < length; index += 1) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      code += characters[randomIndex];
+    }
+    return code;
+  }, []);
+
+  const assignGeneratedRoomCode = useCallback(
+    (exclude?: string | null) => {
+      const normalisedExclude = exclude ? exclude.trim().toUpperCase() : null;
+      let candidate = '';
+
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const generated = generateRoomCode();
+        if (!normalisedExclude || generated !== normalisedExclude) {
+          candidate = generated;
+          break;
+        }
+      }
+
+      if (!candidate) {
+        candidate = generateRoomCode();
+      }
+
+      setRoomCodeValue(candidate);
+      setRoomCodeError(null);
+    },
+    [generateRoomCode]
+  );
+
+  const handleGenerateNewRoomCode = useCallback(() => {
+    assignGeneratedRoomCode(roomCodeValue || selectedSystem?.room_code || null);
+  }, [assignGeneratedRoomCode, roomCodeValue, selectedSystem]);
+
   const loadSystems = useCallback(async () => {
     setError(null);
     setRefreshing(true);
@@ -181,9 +219,9 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
 
   const openRoomCodeModal = (system: SystemRecord) => {
     setSelectedSystem(system);
-    setRoomCodeValue(system.room_code ?? '');
     setRoomCodeError(null);
     setSuccessMessage(null);
+    assignGeneratedRoomCode(system.room_code ?? null);
     setShowRoomCodeModal(true);
   };
 
@@ -240,9 +278,9 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
       return;
     }
 
-    const trimmedCode = roomCodeValue.trim();
-    if (!trimmedCode) {
-      setRoomCodeError('Please enter a room code');
+    const generatedCode = roomCodeValue.trim();
+    if (!generatedCode) {
+      setRoomCodeError('Unable to generate a room code. Please try again.');
       return;
     }
 
@@ -254,7 +292,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
       const response = await fetch(`${API_BASE}/systems/add-room-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ system_id: String(currentSystem.id), room_code: trimmedCode }),
+        body: JSON.stringify({ system_id: String(currentSystem.id), room_code: generatedCode }),
       });
 
       let payload: unknown = null;
@@ -271,12 +309,12 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
           'error' in payload &&
           typeof (payload as { error: unknown }).error === 'string'
             ? (payload as { error: string }).error
-            : 'Failed to add room code';
+            : 'Failed to save room code';
         throw new Error(message);
       }
 
       setSuccessMessage(
-        `Room code "${trimmedCode}" ${hadRoomCode ? 'updated for' : 'added to'} "${currentSystem.system_name}".`
+        `Room code "${generatedCode}" ${hadRoomCode ? 'regenerated for' : 'generated for'} "${currentSystem.system_name}".`
       );
       setShowRoomCodeModal(false);
       setSelectedSystem(null);
@@ -284,7 +322,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
       await loadSystems();
     } catch (roomCodeErr) {
       const message =
-        roomCodeErr instanceof Error ? roomCodeErr.message : 'Unable to add room code';
+        roomCodeErr instanceof Error ? roomCodeErr.message : 'Unable to save room code';
       setRoomCodeError(message);
     } finally {
       setRoomCodeSubmitting(false);
@@ -429,7 +467,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
                       className="w-full py-3 rounded-xl border border-white/20 text-white hover:bg-white/10 transition"
                       onClick={() => openRoomCodeModal(system)}
                     >
-                      {hasRoomCode ? 'Update Room Code' : 'Add Room Code'}
+                      {hasRoomCode ? 'Regenerate Room Code' : 'Generate Room Code'}
                     </button>
                     <button
                       className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-semibold hover:opacity-90 transition"
@@ -506,17 +544,17 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-2xl p-6 relative">
             <h2 className="text-2xl font-semibold text-white mb-4">
-              {selectedSystem.room_code ? 'Update Room Code' : 'Add Room Code'}
+              {selectedSystem.room_code ? 'Regenerate Room Code' : 'Generate Room Code'}
             </h2>
             <p className="text-slate-400 text-sm mb-6">
               {selectedSystem.room_code ? (
                 <>
-                  Update the room code for <span className="text-white">{selectedSystem.system_name}</span>. Current code:{' '}
+                  We created a new code for <span className="text-white">{selectedSystem.system_name}</span>. Previous code:{' '}
                   <span className="text-white">{selectedSystem.room_code}</span>
                 </>
               ) : (
                 <>
-                  Set a room code for <span className="text-white">{selectedSystem.system_name}</span>.
+                  Share this room code for <span className="text-white">{selectedSystem.system_name}</span>. Generate again if you need a different one.
                 </>
               )}
             </p>
@@ -527,15 +565,26 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
             )}
             <form onSubmit={handleRoomCodeSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm text-slate-300 mb-2">Room Code</label>
-                <input
-                  type="text"
-                  value={roomCodeValue}
-                  onChange={(event) => setRoomCodeValue(event.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g. XyTv"
-                  disabled={roomCodeSubmitting}
-                />
+                <label className="block text-sm text-slate-300 mb-2">Generated Room Code</label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={roomCodeValue}
+                    readOnly
+                    aria-readonly="true"
+                    className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={roomCodeSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGenerateNewRoomCode}
+                    className="px-4 py-3 rounded-lg border border-white/20 text-white hover:bg-white/10 transition"
+                    disabled={roomCodeSubmitting}
+                  >
+                    Generate Again
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">Codes use four uppercase letters or numbers.</p>
               </div>
               <div className="flex gap-3 justify-end">
                 <button
