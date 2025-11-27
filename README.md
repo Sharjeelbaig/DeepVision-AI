@@ -32,3 +32,6 @@ npm install
 # Start the application
 npm run electron
 ```
+
+<img width="1680" height="1050" alt="image" src="https://github.com/user-attachments/assets/8b6792fa-6442-431b-9cc6-de0e497cae1e" />
+
