@@ -16,10 +16,23 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageRevision, setImageRevision] = useState(0);
 
   useEffect(() => {
     setDetails(system);
   }, [system]);
+
+  const detection: MonitoredDetection | null = useMemo(() => {
+    return details.monitored_data ?? null;
+  }, [details.monitored_data]);
+
+  useEffect(() => {
+    if (!details.monitored_image_url) {
+      setImageRevision(0);
+      return;
+    }
+    setImageRevision((prev) => prev + 1);
+  }, [details.monitored_image_url, detection]);
 
   const fetchDetails = useCallback(async () => {
     setError(null);
@@ -66,9 +79,24 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
     void fetchDetails();
   }, [fetchDetails]);
 
-  const detection: MonitoredDetection | null = useMemo(() => {
-    return details.monitored_data ?? null;
-  }, [details.monitored_data]);
+  const imageSrc = useMemo(() => {
+    if (!details.monitored_image_url) {
+      return null;
+    }
+
+    if (imageRevision === 0) {
+      return details.monitored_image_url;
+    }
+
+    try {
+      const url = new URL(details.monitored_image_url);
+      url.searchParams.set('cb', String(imageRevision));
+      return url.toString();
+    } catch {
+      const separator = details.monitored_image_url.includes('?') ? '&' : '?';
+      return `${details.monitored_image_url}${separator}cb=${encodeURIComponent(imageRevision)}`;
+    }
+  }, [details.monitored_image_url, imageRevision]);
 
   const formatConfidence = useCallback((value: unknown): string => {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -87,7 +115,6 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
     return 'N/A';
   }, []);
 
-  const detectionBox = detection?.box ?? null;
   const detectionScore = formatConfidence(detection?.score);
   const recognizedFaces = detection?.recognized_faces ?? null;
   const hasRecognizedFaces = Boolean(recognizedFaces && recognizedFaces.length);
@@ -138,7 +165,7 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
               <div className="p-5">
                 {details.monitored_image_url ? (
                   <img
-                    src={details.monitored_image_url}
+                    src={imageSrc ?? details.monitored_image_url}
                     alt={`Monitored scene for ${details.system_name}`}
                     className="w-full rounded-xl border border-white/10 object-contain"
                   />
@@ -164,14 +191,14 @@ const ViewSystemScreen = ({ userId, system, onBack }: ViewSystemScreenProps) => 
                         <dt className="text-slate-400">Confidence</dt>
                         <dd className="text-white">{detectionScore}</dd>
                       </div>
-                      {/* {detectionBox ? (
+                      {/* {detection?.box ? (
                         <div>
                           <dt className="text-slate-400 mb-1">Bounding Box</dt>
                           <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                            <span>X Min: <span className="text-white">{detectionBox.xmin ?? '—'}</span></span>
-                            <span>X Max: <span className="text-white">{detectionBox.xmax ?? '—'}</span></span>
-                            <span>Y Min: <span className="text-white">{detectionBox.ymin ?? '—'}</span></span>
-                            <span>Y Max: <span className="text-white">{detectionBox.ymax ?? '—'}</span></span>
+                            <span>X Min: <span className="text-white">{detection.box.xmin ?? '—'}</span></span>
+                            <span>X Max: <span className="text-white">{detection.box.xmax ?? '—'}</span></span>
+                            <span>Y Min: <span className="text-white">{detection.box.ymin ?? '—'}</span></span>
+                            <span>Y Max: <span className="text-white">{detection.box.ymax ?? '—'}</span></span>
                           </div>
                         </div>
                       ) : (

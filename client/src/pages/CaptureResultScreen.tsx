@@ -84,15 +84,15 @@ const CaptureResultScreen = ({ result, onRestart }: CaptureResultScreenProps) =>
         )}
 
         <div className="results-grid">
-          <div>
+          {/* <div>
             <strong>Server Response</strong>
             <pre>{JSON.stringify(result.apiResponse, null, 2)}</pre>
-          </div>
+          </div> */}
         </div>
 
-        <button type="button" className="action-button" onClick={onRestart}>
+        {/* <button type="button" className="action-button" onClick={onRestart}>
           Start New Capture
-        </button>
+        </button> */}
       </div>
     </div>
   );
