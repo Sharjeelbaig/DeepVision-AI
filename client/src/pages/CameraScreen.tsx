@@ -64,7 +64,7 @@ const CameraScreen = ({ roomCode, onCaptureComplete, onCancel }: CameraScreenPro
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            system_id: roomCode,
+            // system_id: roomCode,
             base64_image: frame,
             room_code: roomCode,
           }),
