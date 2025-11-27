@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, Save, Upload, User as UserIcon } from 'lucide-react';
+import type { User } from '../types/user';
 
 interface UserProfileScreenProps {
-  user: { name: string; email: string; user_id: string };
+  user: User;
   onBack: () => void;
-  onUserUpdated: (updates: Partial<{ name: string; email: string; user_id: string }>) => void;
+  onUserUpdated: (updates: Partial<User>) => void;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
@@ -16,9 +17,18 @@ const UserProfileScreen = ({ user, onBack, onUserUpdated }: UserProfileScreenPro
   const [success, setSuccess] = useState<string | null>(null);
   const [name, setName] = useState(user.name ?? '');
   const [bio, setBio] = useState('');
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(() => {
+    if (typeof user.profileImageUrl === 'string') {
+      const trimmed = user.profileImageUrl.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+    return null;
+  });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [pendingImageBase64, setPendingImageBase64] = useState<string | null>(null);
+  const [imageVersion, setImageVersion] = useState<string>(() => Date.now().toString());
 
   const loadProfile = useCallback(async (silent = false) => {
     if (!silent) {
@@ -65,13 +75,19 @@ const UserProfileScreen = ({ user, onBack, onUserUpdated }: UserProfileScreenPro
                 ? record.avatar.trim()
                 : null;
 
-        setName(remoteName ?? (user.name?.trim() ?? ''));
+        const canonicalName = remoteName ?? (user.name?.trim() ?? '');
+        setName(canonicalName);
         setBio(remoteBio);
         setProfileImageUrl(imageCandidate);
+        setImageVersion(Date.now().toString());
+        onUserUpdated({ name: canonicalName, profileImageUrl: imageCandidate ?? null });
       } else {
-        setName(user.name?.trim() ?? '');
+        const fallbackName = user.name?.trim() ?? '';
+        setName(fallbackName);
         setBio('');
         setProfileImageUrl(null);
+        setImageVersion(Date.now().toString());
+        onUserUpdated({ name: fallbackName, profileImageUrl: null });
       }
     } catch (profileError) {
       console.error('Failed to load profile', profileError);
@@ -82,7 +98,20 @@ const UserProfileScreen = ({ user, onBack, onUserUpdated }: UserProfileScreenPro
         setLoading(false);
       }
     }
-  }, [user.email, user.name]);
+  }, [onUserUpdated, user.email, user.name]);
+
+  useEffect(() => {
+    if (typeof user.profileImageUrl === 'string') {
+      const trimmed = user.profileImageUrl.trim();
+      if (trimmed) {
+        setProfileImageUrl(trimmed);
+        setImageVersion(Date.now().toString());
+        return;
+      }
+    }
+    setProfileImageUrl(null);
+    setImageVersion(Date.now().toString());
+  }, [user.profileImageUrl]);
 
   useEffect(() => {
     loadProfile().catch(() => undefined);
@@ -113,6 +142,11 @@ const UserProfileScreen = ({ user, onBack, onUserUpdated }: UserProfileScreenPro
   };
 
   const displayImage = previewImage || (profileImageUrl && profileImageUrl.trim() ? profileImageUrl.trim() : null);
+  const cacheBustedDisplayImage = displayImage
+    ? displayImage.startsWith('data:')
+      ? displayImage
+      : `${displayImage}${displayImage.includes('?') ? '&' : '?'}v=${imageVersion}`
+    : null;
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -203,8 +237,8 @@ const UserProfileScreen = ({ user, onBack, onUserUpdated }: UserProfileScreenPro
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="flex flex-col sm:flex-row gap-6">
                 <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border border-white/20 overflow-hidden flex items-center justify-center bg-white/5">
-                  {displayImage ? (
-                    <img src={displayImage} alt="Profile" className="w-full h-full object-cover" />
+                  {cacheBustedDisplayImage ? (
+                    <img src={cacheBustedDisplayImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     <UserIcon className="w-10 h-10 text-white/80" />
                   )}

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { LogIn, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import type { User } from '../types/user';
 
 interface LoginScreenProps {
-  onLogin: (user: { name: string; email: string; user_id: string }) => void;
+  onLogin: (user: User) => void;
   onSwitchToRegister: () => void;
 }
 
@@ -85,6 +86,32 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
             ['email'],
           ]) || email;
 
+        const nameFromResponse =
+          resolveField([
+            ['user', 'user_metadata', 'full_name'],
+            ['user', 'user_metadata', 'name'],
+            ['user', 'full_name'],
+            ['user', 'name'],
+            ['data', 'profile', 'full_name'],
+            ['data', 'profile', 'name'],
+            ['profile', 'full_name'],
+            ['profile', 'name'],
+            ['user_metadata', 'full_name'],
+            ['user_metadata', 'name'],
+          ]);
+
+        const avatarFromResponse =
+          resolveField([
+            ['user', 'user_metadata', 'avatar_url'],
+            ['user', 'user_metadata', 'avatar'],
+            ['user', 'avatar_url'],
+            ['user', 'avatar'],
+            ['data', 'profile', 'image_url'],
+            ['data', 'profile', 'avatar_url'],
+            ['profile', 'image_url'],
+            ['profile', 'avatar_url'],
+          ]);
+
         const tokenFromResponse = resolveField([
           ['token'],
           ['data', 'token'],
@@ -123,7 +150,18 @@ const LoginScreen = ({ onLogin, onSwitchToRegister }: LoginScreenProps) => {
             ['user_id'],
           ]) || decodeSubjectFromToken(tokenFromResponse) || `session-${Date.now()}`;
 
-        onLogin({ email: emailFromResponse, user_id: idFromResponse });
+        const fallbackName = nameFromResponse && nameFromResponse.trim()
+          ? nameFromResponse.trim()
+          : emailFromResponse.includes('@')
+            ? emailFromResponse.split('@')[0]
+            : emailFromResponse;
+
+        onLogin({
+          name: fallbackName,
+          email: emailFromResponse,
+          user_id: idFromResponse,
+          profileImageUrl: avatarFromResponse && avatarFromResponse.trim() ? avatarFromResponse.trim() : undefined,
+        });
       } else {
         setError(data.error || 'Login failed');
       }

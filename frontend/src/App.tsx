@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import LoginScreen from './pages/LoginScreen';
 import RegisterScreen from './pages/RegisterScreen';
 import HomeScreen from './pages/HomeScreen';
@@ -7,8 +7,9 @@ import LiveCameraScreen from './pages/LiveCameraScreen';
 import SystemsManagementScreen from './pages/SystemsManagementScreen';
 import ManageFacesScreen from './pages/ManageFacesScreen';
 import ViewSystemScreen from './pages/ViewSystemScreen';
-import UserProfileScreen from './pages/UserProfileScreen.tsx';
+import UserProfileScreen from './pages/UserProfileScreen';
 import type { SystemRecord } from './types/system';
+import type { User } from './types/user';
 
 type Screen =
   | 'login'
@@ -20,12 +21,6 @@ type Screen =
   | 'manage-faces'
   | 'view-system'
   | 'profile';
-
-interface User {
-  name: string;
-  email: string;
-  user_id: string;
-}
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -54,7 +49,7 @@ function App() {
     setCurrentScreen('login');
   };
 
-  const handleUserUpdated = (updates: Partial<User>) => {
+  const handleUserUpdated = useCallback((updates: Partial<User>) => {
     setUser((previous) => {
       if (!previous) {
         return previous;
@@ -63,7 +58,7 @@ function App() {
       localStorage.setItem('user', JSON.stringify(next));
       return next;
     });
-  };
+  }, []);
 
   const renderScreen = () => {
     switch (currentScreen) {

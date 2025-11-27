@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { LogOut, PlusCircle, RefreshCw, User, Users } from 'lucide-react';
 import type { SystemRecord } from '../types/system';
 import { normalizeSystemRecord } from '../types/system';
+import type { User as AppUser } from '../types/user';
 
 interface SystemsManagementScreenProps {
-  user: { name: string; email: string; user_id: string };
+  user: AppUser;
   onLogout: () => void;
   onManageFaces: (system: SystemRecord) => void;
   onViewSystem: (system: SystemRecord) => void;
@@ -34,7 +35,16 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
     const initial = typeof user.name === 'string' ? user.name.trim() : '';
     return initial;
   });
-  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(() => {
+    if (typeof user.profileImageUrl === 'string') {
+      const trimmed = user.profileImageUrl.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+    return null;
+  });
+  const [profileImageKey, setProfileImageKey] = useState<string>(() => Date.now().toString());
 
   const loadSystems = useCallback(async () => {
     setError(null);
@@ -90,9 +100,12 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
         const record = profile as Record<string, unknown>;
         const imageCandidate = record.image_url ?? record.avatar_url ?? record.avatarUrl;
         if (typeof imageCandidate === 'string' && imageCandidate.trim()) {
-          setProfileImageUrl(imageCandidate.trim());
+          const trimmedImage = imageCandidate.trim();
+          setProfileImageUrl(trimmedImage);
+          setProfileImageKey(Date.now().toString());
         } else {
           setProfileImageUrl(null);
+          setProfileImageKey(Date.now().toString());
         }
         const candidateName =
           typeof record.full_name === 'string' && record.full_name.trim()
@@ -116,6 +129,7 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
       const fallback = typeof user.email === 'string' && user.email.trim() ? user.email.trim() : 'User';
       setProfileName(fallback);
       setProfileImageUrl(null);
+      setProfileImageKey(Date.now().toString());
     } catch (profileError) {
       console.error('Failed to load user profile', profileError);
       const preferred = typeof user.name === 'string' && user.name.trim()
@@ -125,8 +139,9 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
           : 'User';
       setProfileName(preferred);
       setProfileImageUrl(null);
+      setProfileImageKey(Date.now().toString());
     }
-  }, [user.email, user.name]);
+  }, [user.email, user.name, user.profileImageUrl]);
 
   useEffect(() => {
     loadSystems();
@@ -135,6 +150,19 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
   useEffect(() => {
     loadUserProfile();
   }, [loadUserProfile]);
+
+  useEffect(() => {
+    if (typeof user.profileImageUrl === 'string') {
+      const trimmed = user.profileImageUrl.trim();
+      if (trimmed) {
+        setProfileImageUrl(trimmed);
+        setProfileImageKey(Date.now().toString());
+        return;
+      }
+    }
+    setProfileImageUrl(null);
+    setProfileImageKey(Date.now().toString());
+  }, [user.profileImageUrl]);
 
   const openCreateModal = () => {
     setCreateError(null);
@@ -274,7 +302,16 @@ const SystemsManagementScreen = ({ user, onLogout, onManageFaces, onViewSystem, 
   }, [systems, hasSystems]);
 
   const displayName = profileName || user.email || 'User';
-  const avatarSrc = profileImageUrl && profileImageUrl.trim() ? profileImageUrl.trim() : null;
+  const resolvedProfileImage = profileImageUrl && profileImageUrl.trim()
+    ? profileImageUrl.trim()
+    : typeof user.profileImageUrl === 'string' && user.profileImageUrl.trim()
+      ? user.profileImageUrl.trim()
+      : null;
+  const avatarSrc = resolvedProfileImage
+    ? resolvedProfileImage.startsWith('data:')
+      ? resolvedProfileImage
+      : `${resolvedProfileImage}${resolvedProfileImage.includes('?') ? '&' : '?'}v=${profileImageKey}`
+    : null;
 
   return (
     <div className="min-h-screen p-6">
